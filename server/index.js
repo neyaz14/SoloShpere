@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb')
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 require('dotenv').config()
 
 const port = process.env.PORT || 9000
@@ -22,6 +22,61 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const db = client.db('solo-db')
+    const jobsCollection = db.collection('jobs')
+
+    // save a jobData in db
+    app.post('/add-job', async (req, res) => {
+      const jobData = req.body
+      const result = await jobsCollection.insertOne(jobData)
+      console.log(result)
+      res.send(result)
+    })
+
+    // get all jobs data from db
+    app.get('/jobs', async (req, res) => {
+      const result = await jobsCollection.find().toArray()
+      res.send(result)
+    })
+
+    // get all jobs posted by a specific user
+    app.get('/jobs/:email', async (req, res) => {
+      const email = req.params.email
+      const query = { 'buyer.email': email }
+      const result = await jobsCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // delete a job from db
+    app.delete('/job/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await jobsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // get a single job data by id from db
+    app.get('/job/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await jobsCollection.findOne(query)
+      res.send(result)
+    })
+
+    // save a jobData in db
+    app.put('/update-job/:id', async (req, res) => {
+      const id = req.params.id
+      const jobData = req.body
+      const updated = {
+        $set: jobData,
+      }
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const result = await jobsCollection.updateOne(query, updated, options)
+      console.log(result)
+      res.send(result)
+    })
+
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })
     console.log(
